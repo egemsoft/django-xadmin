@@ -70,5 +70,10 @@ class TopNavPlugin(BaseAdminPlugin):
         nodes.append(
             loader.render_to_string('xadmin/blocks/comm.top.topnav.html', {'add_models': add_models}))
 
+    def block_egem_top_navmenu(self, context, nodes):
+
+
+        nodes.append(
+            loader.render_to_string('xadmin/egem/topnav_menu.html'))
 
 site.register_plugin(TopNavPlugin, CommAdminView)
