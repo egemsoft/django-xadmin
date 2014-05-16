@@ -8,6 +8,7 @@ from xadmin.sites import site
 from xadmin.filters import SEARCH_VAR
 from xadmin.views import BaseAdminPlugin, CommAdminView
 from ttnet.utils.middleware import get_user
+from ttnet.common.views import get_menu
 
 class TopNavPlugin(BaseAdminPlugin):
 
@@ -68,7 +69,6 @@ class TopNavPlugin(BaseAdminPlugin):
                     pass
 
         nodes.append(
-            #loader.render_to_string('xadmin/blocks/egem_navbar.html', {'add_models': add_models}))
             loader.render_to_string('xadmin/blocks/comm.top.topnav.html', {'add_models': add_models}))
 
     def block_egem_navbar(self, context, nodes):
@@ -93,8 +93,9 @@ class TopNavPlugin(BaseAdminPlugin):
                     })
                 except NoReverseMatch:
                     pass
-
+        menu = get_menu()
+        user = get_user()
         nodes.append(
-            loader.render_to_string('xadmin/blocks/egem_navbar.html', {'user': get_user()}))
+            loader.render_to_string('xadmin/blocks/egem_navbar.html', {'user': user,'menu':menu }))
 
 site.register_plugin(TopNavPlugin, CommAdminView)
