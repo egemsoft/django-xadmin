@@ -1,0 +1,53 @@
+{% load i18n %}
+<ul class="nav navbar-nav topnav left">
+    <li class="dropdown success">
+        <a href="index.html"><i class="fa-home fa"></i> Uygulamalar</a>
+        <ul class="dropdown-menu" style="display: none;">
+            <li><a href="index_alt1.html">Uygulama Listesi</a></li>
+            <li><a href="index_alt2.html">Uygulama Oluştur</a></li>
+        </ul>
+    </li>
+    <li class="dropdown primary">
+        <a href="#"><i class="fa-star fa"></i> Sürüm Yönetimi</a>
+        <ul class="dropdown-menu" style="display: none;">
+            <li><a href="overview.html">Sürüm Takvimi Ayarları</a></li>
+            <li><a href="scaffolding.html">Sürüm Takip</a></li>
+        </ul>
+    </li>
+    <li class="dropdown danger">
+        <a href="#"><i class="fa-leaf fa"></i> Test Yönetimi</a>
+        <ul class="dropdown-menu" style="display: none;">
+            <li><a href="about.html">Test Koşum Durumu</a></li>
+            <li><a href="services.html">Test Planı Oluşturma</a></li>
+            <li class="dropdown"><a href="pricingtable.html">Veri Tipi Atama</a>
+                <ul class="dropdown-menu sub-menu" style="display: none;">
+                    <li><a href="#">CR Atama</a></li>
+                    <li><a href="#">Prod Defection</a></li>
+                    <li><a href="#">ESB Prod Defection</a></li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+    <li class="dropdown warning">
+        <a href="#"><i class="fa-camera fa"></i> İşlemler</a>
+        <ul class="dropdown-menu" style="display: none;">
+            <li class="dropdown"><a href="#">İşlem Bekleyen Versiyonlar</a></li>
+            <li class="dropdown"><a href="#">Ticket Oluştur</a></li>
+            <li><a href="portfolio-alt3.html">Bekleyen Ticketlar </a></li>
+        </ul>
+    </li>
+</ul>
+<ul class="nav navbar-nav topnav pull-right">
+    {% if user.is_active and user.is_staff %}
+        <li class="dropdown info">
+           <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#">
+                {% trans ' ' %} {% filter force_escape %}
+                    {% firstof user.first_name user.username %}{% endfilter %}</a>
+            <ul id="g-account-menu" class="dropdown-menu">
+
+                <li><a href="{% url 'xadmin:logout' %}"><i class="show-sm fa fa-sign-out"></i><span
+            class="hide-sm">{% trans 'Log out' %}</span></a></li>
+            </ul>
+        </li>
+    {% endif %}
+</ul>

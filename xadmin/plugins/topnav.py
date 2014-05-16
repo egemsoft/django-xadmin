@@ -7,7 +7,7 @@ from django.utils.translation import ugettext as _
 from xadmin.sites import site
 from xadmin.filters import SEARCH_VAR
 from xadmin.views import BaseAdminPlugin, CommAdminView
-
+from ttnet.utils.middleware import get_user
 
 class TopNavPlugin(BaseAdminPlugin):
 
@@ -68,7 +68,33 @@ class TopNavPlugin(BaseAdminPlugin):
                     pass
 
         nodes.append(
+            #loader.render_to_string('xadmin/blocks/egem_navbar.html', {'add_models': add_models}))
             loader.render_to_string('xadmin/blocks/comm.top.topnav.html', {'add_models': add_models}))
 
+    def block_egem_navbar(self, context, nodes):
+        add_models = []
+
+        site_name = self.admin_site.name
+
+        if self.global_add_models == None:
+            models = self.admin_site._registry.keys()
+        else:
+            models = self.global_add_models
+        for model in models:
+            app_label = model._meta.app_label
+
+            if self.has_model_perm(model, "add"):
+                info = (app_label, model._meta.module_name)
+                try:
+                    add_models.append({
+                        'title': _('Add %s') % capfirst(model._meta.verbose_name),
+                        'url': reverse('xadmin:%s_%s_add' % info, current_app=site_name),
+                        'model': model
+                    })
+                except NoReverseMatch:
+                    pass
+
+        nodes.append(
+            loader.render_to_string('xadmin/blocks/egem_navbar.html', {'user': get_user()}))
 
 site.register_plugin(TopNavPlugin, CommAdminView)
