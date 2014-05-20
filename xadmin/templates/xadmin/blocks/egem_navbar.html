@@ -3,7 +3,7 @@
     {% for i in menu %}
         {% if i.children > 0 %}
             <li class="dropdown {{ i.class }}">
-                <a href="{{ i.url }}"><i class="fa-home fa"></i> {{ i.name }}</a>
+                <a href="{{ i.url }}"><i class="{{ i.icon_class }}"></i> {{ i.name }}</a>
 
                 <ul class="dropdown-menu" style="display: none;">
                     {% for j in i.children %}
