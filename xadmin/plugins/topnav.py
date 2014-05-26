@@ -7,8 +7,6 @@ from django.utils.translation import ugettext as _
 from xadmin.sites import site
 from xadmin.filters import SEARCH_VAR
 from xadmin.views import BaseAdminPlugin, CommAdminView
-from ttnet.utils.middleware import get_user
-from ttnet.common.views import get_menu
 
 class TopNavPlugin(BaseAdminPlugin):
 
