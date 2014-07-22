@@ -305,6 +305,83 @@ class DateFieldListFilter(ListFieldFilter):
 
 
 @manager.register
+class DateTimeFieldListFilter(ListFieldFilter):
+    template = 'xadmin/filters/datetime.html'
+    lookup_formats = {'since': '%s__gte', 'until': '%s__lt',
+                      'year': '%s__year', 'month': '%s__month', 'day': '%s__day',
+                      'isnull': '%s__isnull'}
+
+    @classmethod
+    def test(cls, field, request, params, model, admin_view, field_path):
+        return isinstance(field, models.DateField)
+
+    def __init__(self, field, request, params, model, admin_view, field_path):
+        self.field_generic = '%s__' % field_path
+        self.date_params = dict([(FILTER_PREFIX + k, v) for k, v in params.items()
+                                 if k.startswith(self.field_generic)])
+
+        super(DateTimeFieldListFilter, self).__init__(
+            field, request, params, model, admin_view, field_path)
+
+        now = timezone.now()
+        # When time zone support is enabled, convert "now" to the user's time
+        # zone so Django's definition of "Today" matches what the user expects.
+        if now.tzinfo is not None:
+            current_tz = timezone.get_current_timezone()
+            now = now.astimezone(current_tz)
+            if hasattr(current_tz, 'normalize'):
+                # available for pytz time zones
+                now = current_tz.normalize(now)
+
+        if isinstance(field, models.DateTimeField):
+            today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        else:       # field is a models.DateField
+            today = now.date()
+        tomorrow = today + datetime.timedelta(days=1)
+
+        self.links = (
+            (_('Any date'), {}),
+            (_('Has date'), {
+                self.lookup_isnull_name: False
+            }),
+            (_('Has no date'), {
+                self.lookup_isnull_name: 'True'
+            }),
+            (_('Today'), {
+                self.lookup_since_name: str(today),
+                self.lookup_until_name: str(tomorrow),
+            }),
+            (_('Past 7 days'), {
+                self.lookup_since_name: str(today - datetime.timedelta(days=7)),
+                self.lookup_until_name: str(tomorrow),
+            }),
+            (_('This month'), {
+                self.lookup_since_name: str(today.replace(day=1)),
+                self.lookup_until_name: str(tomorrow),
+            }),
+            (_('This year'), {
+                self.lookup_since_name: str(today.replace(month=1, day=1)),
+                self.lookup_until_name: str(tomorrow),
+            }),
+        )
+
+    def get_context(self):
+        context = super(DateTimeFieldListFilter, self).get_context()
+        context['choice_selected'] = bool(self.lookup_year_val) or bool(self.lookup_month_val) \
+            or bool(self.lookup_day_val)
+        return context
+
+    def choices(self):
+        for title, param_dict in self.links:
+            yield {
+                'selected': self.date_params == param_dict,
+                'query_string': self.query_string(
+                param_dict, [FILTER_PREFIX + self.field_generic]),
+                'display': title,
+            }
+
+
+@manager.register
 class RelatedFieldSearchFilter(FieldFilter):
     template = 'xadmin/filters/fk_search.html'
 

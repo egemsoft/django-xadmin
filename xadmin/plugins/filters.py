@@ -11,7 +11,8 @@ from django.template import loader
 from django.utils.encoding import smart_str
 from django.utils.translation import ugettext as _
 
-from xadmin.filters import manager as filter_manager, FILTER_PREFIX, SEARCH_VAR, DateFieldListFilter, RelatedFieldSearchFilter
+from xadmin.filters import manager as filter_manager, FILTER_PREFIX, SEARCH_VAR, DateFieldListFilter, RelatedFieldSearchFilter, \
+    DateTimeFieldListFilter
 from xadmin.sites import site
 from xadmin.views import BaseAdminPlugin, ListAdminView
 
@@ -191,6 +192,11 @@ class FilterPlugin(BaseAdminPlugin):
         if bool(filter(lambda s: isinstance(s, DateFieldListFilter), self.filter_specs)):
             media = media + self.vendor('datepicker.css', 'datepicker.js',
                                         'xadmin.widget.datetime.js')
+            print media
+        if bool(filter(lambda s: isinstance(s, DateTimeFieldListFilter), self.filter_specs)):
+            media = media + self.vendor('moment.js','daterangepicker.css', 'daterangepicker.js',
+                                        'xadmin.widget.daterangepicker.js')
+            print media
         if bool(filter(lambda s: isinstance(s, RelatedFieldSearchFilter), self.filter_specs)):
             media = media + self.vendor(
                 'select.js', 'select.css', 'xadmin.widget.select.js')

@@ -101,4 +101,17 @@ vendors = {
             'dev': 'xadmin/vendor/snapjs/snap.js',
         }
     },
+    "moment": {
+        "js": {
+            'dev': 'xadmin/vendor/moment/min/moment-with-langs.min.js',
+        }
+    },
+    "daterangepicker": {
+        "css": {
+            'dev': 'xadmin/vendor/bootstrap-daterangepicker/daterangepicker-bs3.css',
+        },
+        "js": {
+            'dev': 'xadmin/vendor/bootstrap-daterangepicker/daterangepicker.js',
+        }
+    },
 }

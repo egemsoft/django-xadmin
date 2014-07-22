@@ -28,7 +28,24 @@
       var el = $(this);
       var start_date = el.find('.calendar.date-start').datepicker({format: $.date_local.dateJSFormat, language: 'xadmin'});
       var end_date = el.find('.calendar.date-end').datepicker({format: $.date_local.dateJSFormat, language: 'xadmin'});
-      
+
+      $('#daterangepicker').daterangepicker(
+        {
+            ranges: {
+                'Son 3 Dakika': [moment().subtract('minutes', 3), moment()],
+                'Son 30 Dakika': [moment().subtract('minutes', 30), moment()],
+                'Son 1 Saat': [moment().subtract('hours', 1), moment()],
+                'Son 6 Saat': [moment().subtract('hours', 6), moment()],
+                'Today': [moment().startOf('days'), moment()]
+            },
+            startDate: moment().subtract('minutes', 3),
+            endDate: moment(),
+            timePicker: true,
+            timePickerIncrement: 30,
+            format: 'DD.MM.YYYY HH:mm:ss'
+
+        }
+    )
       var checkAvailable = function(){
         if(start_date.data('datepicker').getDate().valueOf() <= end_date.data('datepicker').getDate().valueOf()){
           el.find('button[type=submit]').removeAttr('disabled');
