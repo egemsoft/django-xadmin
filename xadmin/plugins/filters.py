@@ -192,11 +192,9 @@ class FilterPlugin(BaseAdminPlugin):
         if bool(filter(lambda s: isinstance(s, DateFieldListFilter), self.filter_specs)):
             media = media + self.vendor('datepicker.css', 'datepicker.js',
                                         'xadmin.widget.datetime.js')
-            print media
         if bool(filter(lambda s: isinstance(s, DateTimeFieldListFilter), self.filter_specs)):
             media = media + self.vendor('moment.js','daterangepicker.css', 'daterangepicker.js',
                                         'xadmin.widget.daterangepicker.js')
-            print media
         if bool(filter(lambda s: isinstance(s, RelatedFieldSearchFilter), self.filter_specs)):
             media = media + self.vendor(
                 'select.js', 'select.css', 'xadmin.widget.select.js')
