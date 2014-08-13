@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import StringIO
 import datetime
 import sys
@@ -26,6 +27,7 @@ try:
 except:
     has_xlsxwriter = False
 
+mapping = {'İ':'I','Ç':'C','Ş':'S','Ğ':'G','Ö':'O','Ü':'U'}
 
 class ExportMenuPlugin(BaseAdminPlugin):
 
@@ -65,14 +67,14 @@ class ExportPlugin(BaseAdminPlugin):
             value = escape(str(o.text)[25:-7])
         else:
             value = escape(str(o.text))
-        return value
+        return reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, value)
 
     def _get_objects(self, context):
         headers = [c for c in context['result_headers'].cells if c.export]
         rows = context['results']
 
         return [dict([
-            (force_unicode(headers[i].text), self._format_value(o)) for i, o in
+            (reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, force_unicode(headers[i].text)), self._format_value(o)) for i, o in
             enumerate(filter(lambda c:getattr(c, 'export', False), r.cells))]) for r in rows]
 
     def _get_datas(self, context):
@@ -114,7 +116,7 @@ class ExportPlugin(BaseAdminPlugin):
                         cell_style = styles['time']
                     else:
                         cell_style = styles['default']
-                sheet.write(rowx, colx, value, cell_style)
+                sheet.write(rowx, colx, reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, value), cell_style)
         book.close()
 
         output.seek(0)
@@ -127,7 +129,7 @@ class ExportPlugin(BaseAdminPlugin):
             self.request.GET.get('export_xls_header', 'off') == 'on')
 
         model_name = self.opts.verbose_name
-        book = xlwt.Workbook(encoding='utf8')
+        book = xlwt.Workbook(encoding='windows-1254')
         sheet = book.add_sheet(
             u"%s %s" % (_(u'Sheet'), force_unicode(model_name)))
         styles = {'datetime': xlwt.easyxf(num_format_str='yyyy-mm-dd hh:mm:ss'),
@@ -151,7 +153,7 @@ class ExportPlugin(BaseAdminPlugin):
                         cell_style = styles['time']
                     else:
                         cell_style = styles['default']
-                sheet.write(rowx, colx, value, style=cell_style)
+                sheet.write(rowx, colx, reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, value), style=cell_style)
         book.save(output)
 
         output.seek(0)
@@ -163,7 +165,7 @@ class ExportPlugin(BaseAdminPlugin):
         t = t.replace('"', '""').replace(',', '\,')
         if isinstance(t, basestring):
             t = '"%s"' % t
-        return t
+        return reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, t)
 
     def get_csv_export(self, context):
         datas = self._get_datas(context)
@@ -196,7 +198,7 @@ class ExportPlugin(BaseAdminPlugin):
         results = self._get_objects(context)
         stream = StringIO.StringIO()
 
-        xml = SimplerXMLGenerator(stream, "utf-8")
+        xml = SimplerXMLGenerator(stream, 'windows-1254')
         xml.startDocument()
         xml.startElement("objects", {})
 
@@ -219,7 +221,7 @@ class ExportPlugin(BaseAdminPlugin):
 
         file_name = self.opts.verbose_name.replace(' ', '_')
         response['Content-Disposition'] = ('attachment; filename=%s.%s' % (
-            file_name, file_type)).encode('utf-8')
+            file_name, file_type)).encode('windows-1254')
 
         response.write(getattr(self, 'get_%s_export' % file_type)(context))
         return response
