@@ -101,9 +101,12 @@ class FilterPlugin(BaseAdminPlugin):
                 else:
                     field_path = None
                     field_parts = []
+                    title = None
                     if isinstance(list_filter, (tuple, list)):
                         # This is a custom FieldListFilter class for a given field.
-                        field, field_list_filter_class = list_filter
+                        field, field_list_filter_class, title = list_filter
+                        if not field_list_filter_class:
+                            field_list_filter_class = filter_manager.create
                     else:
                         # This is simply a field name, so use the default
                         # FieldListFilter class that has been registered for
@@ -116,11 +119,11 @@ class FilterPlugin(BaseAdminPlugin):
                         field = field_parts[-1]
                     spec = field_list_filter_class(
                         field, self.request, lookup_params,
-                        self.model, self.admin_view, field_path=field_path)
+                        self.model, self.admin_view, field_path=field_path, title=title)
 
-                    if len(field_parts)>1:
+                    if len(field_parts) > 1:
                         # Add related model name to title
-                        spec.title = "%s %s"%(field_parts[-2].name,spec.title)
+                        spec.title = "%s %s" % (field_parts[-2].name, spec.title)
 
                     # Check if we need to use distinct()
                     use_distinct = (use_distinct or
@@ -193,7 +196,7 @@ class FilterPlugin(BaseAdminPlugin):
             media = media + self.vendor('datepicker.css', 'datepicker.js',
                                         'xadmin.widget.datetime.js')
         if bool(filter(lambda s: isinstance(s, DateTimeFieldListFilter), self.filter_specs)):
-            media = media + self.vendor('moment.js','daterangepicker.css', 'daterangepicker.js',
+            media = media + self.vendor('moment.js', 'daterangepicker.css', 'daterangepicker.js',
                                         'xadmin.widget.daterangepicker.js')
         if bool(filter(lambda s: isinstance(s, RelatedFieldSearchFilter), self.filter_specs)):
             media = media + self.vendor(
@@ -211,8 +214,9 @@ class FilterPlugin(BaseAdminPlugin):
                 loader.render_to_string(
                     'xadmin/blocks/model_list.nav_form.search_form.html',
                     {'search_var': SEARCH_VAR,
-                        'remove_search_url': self.admin_view.get_query_string(remove=[SEARCH_VAR]),
-                        'search_form_params': self.admin_view.get_form_params(remove=[SEARCH_VAR])},
+                     'remove_search_url': self.admin_view.get_query_string(remove=[SEARCH_VAR]),
+                     'search_form_params': self.admin_view.get_form_params(remove=[SEARCH_VAR])},
                     context_instance=context))
+
 
 site.register_plugin(FilterPlugin, ListAdminView)
