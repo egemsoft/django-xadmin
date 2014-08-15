@@ -121,7 +121,7 @@ class FilterPlugin(BaseAdminPlugin):
                         field, self.request, lookup_params,
                         self.model, self.admin_view, field_path=field_path, title=title)
 
-                    if len(field_parts) > 1:
+                    if not title and len(field_parts) > 1:
                         # Add related model name to title
                         spec.title = "%s %s" % (field_parts[-2].name, spec.title)
 

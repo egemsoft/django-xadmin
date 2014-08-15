@@ -140,7 +140,7 @@ class ListFieldFilter(FieldFilter):
     template = 'xadmin/filters/list.html'
 
     def __init__(self, *args, **kwargs):
-        super(ListFieldFilter, self).__init__(*args, kwargs)
+        super(ListFieldFilter, self).__init__(*args, **kwargs)
 
     def get_context(self):
         context = super(ListFieldFilter, self).get_context()
