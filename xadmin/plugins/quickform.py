@@ -6,16 +6,16 @@ from django.forms.models import modelform_factory
 import copy
 from xadmin.sites import site
 from xadmin.util import get_model_from_relation, vendor
-from xadmin.views import BaseAdminPlugin, ModelFormAdminView
+from xadmin.views import BaseAdminPlugin, ModelFormAdminView, ModelAdminView
 from xadmin.layout import Layout
 
 
 class QuickFormPlugin(BaseAdminPlugin):
-
     def init_request(self, *args, **kwargs):
         if self.request.method == 'GET' and self.request.is_ajax() or self.request.GET.get('_ajax'):
             self.admin_view.add_form_template = 'xadmin/views/quick_form.html'
             self.admin_view.change_form_template = 'xadmin/views/quick_form.html'
+            self.admin_view.delete_form_template = 'xadmin/views/quick_delete_confirmation.html'
             return True
         return False
 
@@ -44,6 +44,7 @@ class RelatedFieldWidgetWrapper(forms.Widget):
     This class is a wrapper to a given widget to add the add icon for the
     admin interface.
     """
+
     def __init__(self, widget, rel, add_url, rel_add_url):
         self.is_hidden = widget.is_hidden
         self.needs_multipart_form = widget.needs_multipart_form
@@ -74,10 +75,10 @@ class RelatedFieldWidgetWrapper(forms.Widget):
         if self.add_url:
             output.append(u'<a href="%s" title="%s" class="btn btn-primary btn-sm btn-ajax pull-right" data-for-id="id_%s" data-refresh-url="%s"><i class="fa fa-plus"></i></a>'
                           % (
-                              self.add_url, (_('Create New %s') % self.rel.to._meta.verbose_name), name,
-                              "%s?_field=%s&%s=" % (self.rel_add_url, name, name)))
+                self.add_url, (_('Create New %s') % self.rel.to._meta.verbose_name), name,
+                "%s?_field=%s&%s=" % (self.rel_add_url, name, name)))
         output.extend(['<div class="control-wrap" id="id_%s_wrap_container">' % name,
-                  self.widget.render(name, value, *args, **kwargs), '</div>'])
+                       self.widget.render(name, value, *args, **kwargs), '</div>'])
         return mark_safe(u''.join(output))
 
     def build_attrs(self, extra_attrs=None, **kwargs):
@@ -93,7 +94,6 @@ class RelatedFieldWidgetWrapper(forms.Widget):
 
 
 class QuickAddBtnPlugin(BaseAdminPlugin):
-
     def formfield_for_dbfield(self, formfield, db_field, **kwargs):
         if formfield and self.model in self.admin_site._registry and isinstance(db_field, (models.ForeignKey, models.ManyToManyField)):
             rel_model = get_model_from_relation(db_field)
@@ -103,5 +103,6 @@ class QuickAddBtnPlugin(BaseAdminPlugin):
                     formfield.widget, db_field.rel, add_url, self.get_model_url(self.model, 'add'))
         return formfield
 
-site.register_plugin(QuickFormPlugin, ModelFormAdminView)
+
+site.register_plugin(QuickFormPlugin, ModelAdminView)
 site.register_plugin(QuickAddBtnPlugin, ModelFormAdminView)
