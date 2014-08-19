@@ -72,6 +72,10 @@ class FilterPlugin(BaseAdminPlugin):
         return clean_lookup in self.list_filter
 
     def get_list_queryset(self, queryset):
+        if hasattr(self.admin_view, 'get_list_filter'):
+            self.list_filter = self.admin_view.get_list_filter()
+        if hasattr(self.admin_view, 'get_search_fields'):
+            self.search_fields = self.admin_view.get_search_fields()
         lookup_params = dict([(smart_str(k)[len(FILTER_PREFIX):], v) for k, v in self.admin_view.params.items()
                               if smart_str(k).startswith(FILTER_PREFIX) and v != ''])
         for p_key, p_val in lookup_params.iteritems():
