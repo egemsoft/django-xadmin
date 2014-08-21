@@ -87,7 +87,7 @@ class FieldFilterManager(object):
             self._field_list_filters.append(list_filter_class)
         return list_filter_class
 
-    def create(self, field, request, params, model, admin_view, field_path, title=None):
+    def create(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None):
         for list_filter_class in self._field_list_filters:
             if not list_filter_class.test(field, request, params, model, admin_view, field_path):
                 continue
@@ -101,11 +101,12 @@ manager = FieldFilterManager()
 class FieldFilter(BaseFilter):
     lookup_formats = {}
 
-    def __init__(self, field, request, params, model, admin_view, field_path, title=None):
+    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None):
         self.field = field
         self.field_path = field_path
         self.title = title if title else getattr(field, 'verbose_name', field_path)
         self.context_params = {}
+        self.where_parts = where_parts
 
         super(FieldFilter, self).__init__(request, params, model, admin_view)
 
@@ -222,12 +223,39 @@ class NumberFieldListFilter(FieldFilter):
         return isinstance(field, (models.DecimalField, models.FloatField, models.IntegerField))
 
     def do_filte(self, queryset):
-        params = self.used_params.copy()
-        ne_key = '%s__ne' % self.field_path
-        if ne_key in params:
-            queryset = queryset.exclude(
-                **{self.field_path: params.pop(ne_key)})
-        return queryset.filter(**params)
+        qs = queryset
+        if self.where_parts:
+            where = []
+            for k, v in self.used_params.iteritems():
+                parts = k.split('__')
+                if len(parts) > 1:
+                    lookup = parts[1]
+                    operator = None
+                    if lookup == 'exact':
+                        operator = '='
+                    elif lookup == 'lt':
+                        operator = '<'
+                    elif lookup == 'lte':
+                        operator = '<='
+                    elif lookup == 'gt':
+                        operator = '>'
+                    elif lookup == 'gte':
+                        operator = '>='
+                    elif lookup == 'ne':
+                        operator = '<>'
+
+                    where.append('(%s) %s %s' % (self.where_parts, operator, v))
+            if where:
+                qs = qs.extra(where=where)
+        else:
+            params = self.used_params.copy()
+            ne_key = '%s__ne' % self.field_path
+            if ne_key in params:
+                queryset = queryset.exclude(
+                    **{self.field_path: params.pop(ne_key)})
+            qs = queryset.filter(**params)
+
+        return qs
 
 
 @manager.register
@@ -241,7 +269,7 @@ class DateFieldListFilter(ListFieldFilter):
     def test(cls, field, request, params, model, admin_view, field_path):
         return isinstance(field, models.DateField)
 
-    def __init__(self, field, request, params, model, admin_view, field_path, title=None):
+    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None):
         self.field_generic = '%s__' % field_path
         self.date_params = dict([(FILTER_PREFIX + k, v) for k, v in params.items()
                                  if k.startswith(self.field_generic)])
@@ -318,7 +346,7 @@ class DateTimeFieldListFilter(ListFieldFilter):
     def test(cls, field, request, params, model, admin_view, field_path):
         return isinstance(field, models.DateField)
 
-    def __init__(self, field, request, params, model, admin_view, field_path, title=None):
+    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None):
         self.field_generic = '%s__' % field_path
         self.date_params = dict([(FILTER_PREFIX + k, v) for k, v in params.items()
                                  if k.startswith(self.field_generic)])
@@ -396,7 +424,7 @@ class RelatedFieldSearchFilter(FieldFilter):
             get_model_from_relation(field))
         return related_modeladmin and getattr(related_modeladmin, 'relfield_style', None) == 'fk-ajax'
 
-    def __init__(self, field, request, params, model, model_admin, field_path, title=None):
+    def __init__(self, field, request, params, model, model_admin, field_path, title=None, where_parts=None):
         other_model = get_model_from_relation(field)
         if hasattr(field, 'rel'):
             rel_name = field.rel.get_related_field().name
@@ -442,7 +470,7 @@ class RelatedFieldListFilter(ListFieldFilter):
     def test(cls, field, request, params, model, admin_view, field_path):
         return (hasattr(field, 'rel') and bool(field.rel) or isinstance(field, models.related.RelatedObject))
 
-    def __init__(self, field, request, params, model, model_admin, field_path, title=None):
+    def __init__(self, field, request, params, model, model_admin, field_path, title=None, where_parts=None):
         other_model = get_model_from_relation(field)
         if hasattr(field, 'rel'):
             rel_name = field.rel.get_related_field().name
@@ -528,7 +556,7 @@ class MultiSelectFieldListFilter(ListFieldFilter):
         c = get_cache(self.cache_config['cache'])
         return c.set(self.cache_config['key'] % self.field_path, choices)
 
-    def __init__(self, field, request, params, model, model_admin, field_path, field_order_by=None, field_limit=None, sort_key=None, cache_config=None, title=None):
+    def __init__(self, field, request, params, model, model_admin, field_path, field_order_by=None, field_limit=None, sort_key=None, cache_config=None, title=None, where_parts=None):
         super(MultiSelectFieldListFilter, self).__init__(field, request, params, model, model_admin, field_path, title=title)
 
         # Check for it in the cachce
@@ -584,7 +612,7 @@ class AllValuesFieldListFilter(ListFieldFilter):
     def test(cls, field, request, params, model, admin_view, field_path):
         return True
 
-    def __init__(self, field, request, params, model, admin_view, field_path, title=None):
+    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None):
         parent_model, reverse_path = reverse_field_path(model, field_path)
         queryset = parent_model._default_manager.all()
         # optional feature: limit choices base on existing relationships
