@@ -106,13 +106,18 @@ class FilterPlugin(BaseAdminPlugin):
                     field_path = None
                     field_parts = []
                     where_parts = None
+                    choices = None
                     title = None
                     if isinstance(list_filter, (tuple, list)):
                         # This is a custom FieldListFilter class for a given field.
-                        if len(list_filter) > 3:
-                            field, field_list_filter_class, title, where_parts = list_filter
-                        else:
-                            field, field_list_filter_class, title = list_filter
+                        field, field_list_filter_class, config = list_filter
+                        if config:
+                            if 'title' in config:
+                                title = config['title']
+                            if 'where_parts' in config:
+                                where_parts = config['where_parts']
+                            if 'choices' in config:
+                                choices = config['choices']
                         if not field_list_filter_class:
                             field_list_filter_class = filter_manager.create
                     else:
@@ -131,8 +136,8 @@ class FilterPlugin(BaseAdminPlugin):
                                 field_parts = field_path.split('__')
 
                         field = field_parts[-1]
-                    spec = field_list_filter_class(field, self.request, lookup_params, self.model, self.admin_view, field_path=field_path, title=title, where_parts=where_parts)
 
+                    spec = field_list_filter_class(field, self.request, lookup_params, self.model, self.admin_view, field_path=field_path, title=title, where_parts=where_parts, external_choices=choices)
                     if not title and len(field_parts) > 1:
                         # Add related model name to title
                         spec.title = "%s %s" % (field_parts[-2].name, spec.title)

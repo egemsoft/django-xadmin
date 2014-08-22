@@ -87,7 +87,7 @@ class FieldFilterManager(object):
             self._field_list_filters.append(list_filter_class)
         return list_filter_class
 
-    def create(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None):
+    def create(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None, external_choices=None):
         for list_filter_class in self._field_list_filters:
             if not list_filter_class.test(field, request, params, model, admin_view, field_path):
                 continue
@@ -101,12 +101,13 @@ manager = FieldFilterManager()
 class FieldFilter(BaseFilter):
     lookup_formats = {}
 
-    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None):
+    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None, external_choices=None):
         self.field = field
         self.field_path = field_path
         self.title = title if title else getattr(field, 'verbose_name', field_path)
         self.context_params = {}
         self.where_parts = where_parts
+        self.external_choices = external_choices
 
         super(FieldFilter, self).__init__(request, params, model, admin_view)
 
@@ -188,12 +189,13 @@ class ChoicesFieldListFilter(ListFieldFilter):
         return bool(field.choices)
 
     def choices(self):
+        list_choices = self.external_choices if self.external_choices else self.field.flatchoices
         yield {
             'selected': self.lookup_exact_val is '',
             'query_string': self.query_string({}, [self.lookup_exact_name]),
             'display': _('All')
         }
-        for lookup, title in self.field.flatchoices:
+        for lookup, title in list_choices:
             yield {
                 'selected': smart_unicode(lookup) == self.lookup_exact_val,
                 'query_string': self.query_string({self.lookup_exact_name: lookup}),
@@ -269,7 +271,7 @@ class DateFieldListFilter(ListFieldFilter):
     def test(cls, field, request, params, model, admin_view, field_path):
         return isinstance(field, models.DateField)
 
-    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None):
+    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None, external_choices=None):
         self.field_generic = '%s__' % field_path
         self.date_params = dict([(FILTER_PREFIX + k, v) for k, v in params.items()
                                  if k.startswith(self.field_generic)])
@@ -346,13 +348,13 @@ class DateTimeFieldListFilter(ListFieldFilter):
     def test(cls, field, request, params, model, admin_view, field_path):
         return isinstance(field, models.DateField)
 
-    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None):
+    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None, external_choices=None):
         self.field_generic = '%s__' % field_path
         self.date_params = dict([(FILTER_PREFIX + k, v) for k, v in params.items()
                                  if k.startswith(self.field_generic)])
 
         super(DateTimeFieldListFilter, self).__init__(
-            field, request, params, model, admin_view, field_path, title)
+            field, request, params, model, admin_view, field_path, title=title, where_parts=where_parts, external_choices=external_choices)
 
         now = timezone.now()
         # When time zone support is enabled, convert "now" to the user's time
@@ -424,7 +426,7 @@ class RelatedFieldSearchFilter(FieldFilter):
             get_model_from_relation(field))
         return related_modeladmin and getattr(related_modeladmin, 'relfield_style', None) == 'fk-ajax'
 
-    def __init__(self, field, request, params, model, model_admin, field_path, title=None, where_parts=None):
+    def __init__(self, field, request, params, model, model_admin, field_path, title=None, where_parts=None, external_choices=None):
         other_model = get_model_from_relation(field)
         if hasattr(field, 'rel'):
             rel_name = field.rel.get_related_field().name
@@ -470,7 +472,7 @@ class RelatedFieldListFilter(ListFieldFilter):
     def test(cls, field, request, params, model, admin_view, field_path):
         return (hasattr(field, 'rel') and bool(field.rel) or isinstance(field, models.related.RelatedObject))
 
-    def __init__(self, field, request, params, model, model_admin, field_path, title=None, where_parts=None):
+    def __init__(self, field, request, params, model, model_admin, field_path, title=None, where_parts=None, external_choices=None):
         other_model = get_model_from_relation(field)
         if hasattr(field, 'rel'):
             rel_name = field.rel.get_related_field().name
@@ -479,9 +481,9 @@ class RelatedFieldListFilter(ListFieldFilter):
 
         self.lookup_formats = {'in': '%%s__%s__in' % rel_name, 'exact': '%%s__%s__exact' %
                                                                         rel_name, 'isnull': '%s__isnull'}
-        self.lookup_choices = field.get_choices(include_blank=False)
+        self.lookup_choices = self.external_choices if self.external_choices else field.get_choices(include_blank=False)
         super(RelatedFieldListFilter, self).__init__(
-            field, request, params, model, model_admin, field_path, title=title)
+            field, request, params, model, model_admin, field_path, title=title, where_parts=where_parts, external_choices=external_choices)
 
         if hasattr(field, 'verbose_name'):
             self.lookup_title = field.verbose_name
@@ -502,6 +504,7 @@ class RelatedFieldListFilter(ListFieldFilter):
         return [self.lookup_kwarg, self.lookup_kwarg_isnull]
 
     def choices(self):
+
         yield {
             'selected': self.lookup_exact_val == '' and not self.lookup_isnull_val,
             'query_string': self.query_string({},
@@ -556,8 +559,9 @@ class MultiSelectFieldListFilter(ListFieldFilter):
         c = get_cache(self.cache_config['cache'])
         return c.set(self.cache_config['key'] % self.field_path, choices)
 
-    def __init__(self, field, request, params, model, model_admin, field_path, field_order_by=None, field_limit=None, sort_key=None, cache_config=None, title=None, where_parts=None):
-        super(MultiSelectFieldListFilter, self).__init__(field, request, params, model, model_admin, field_path, title=title)
+    def __init__(self, field, request, params, model, model_admin, field_path, field_order_by=None, field_limit=None, sort_key=None, cache_config=None, title=None, where_parts=None,
+                 external_choices=None):
+        super(MultiSelectFieldListFilter, self).__init__(field, request, params, model, model_admin, field_path, title=title, where_parts=where_parts, external_choices=external_choices)
 
         # Check for it in the cachce
         if cache_config is not None and type(cache_config) == dict:
@@ -581,7 +585,7 @@ class MultiSelectFieldListFilter(ListFieldFilter):
         if field_limit is not None and type(field_limit) == int and queryset.count() > field_limit:
             queryset = queryset[:field_limit]
 
-        self.lookup_choices = [str(it) for it in queryset.values_list(field_path, flat=True) if str(it).strip() != ""]
+        self.lookup_choices = self.external_choices if self.external_choices else  [str(it) for it in queryset.values_list(field_path, flat=True) if str(it).strip() != ""]
         if sort_key is not None:
             self.lookup_choices = sorted(self.lookup_choices, key=sort_key)
 
@@ -612,7 +616,7 @@ class AllValuesFieldListFilter(ListFieldFilter):
     def test(cls, field, request, params, model, admin_view, field_path):
         return True
 
-    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None):
+    def __init__(self, field, request, params, model, admin_view, field_path, title=None, where_parts=None, external_choices=None):
         parent_model, reverse_path = reverse_field_path(model, field_path)
         queryset = parent_model._default_manager.all()
         # optional feature: limit choices base on existing relationships
@@ -626,7 +630,7 @@ class AllValuesFieldListFilter(ListFieldFilter):
                                .order_by(field.name)
                                .values_list(field.name, flat=True))
         super(AllValuesFieldListFilter, self).__init__(
-            field, request, params, model, admin_view, field_path, title=title)
+            field, request, params, model, admin_view, field_path, title=title, where_parts=where_parts, external_choices=external_choices)
 
     def choices(self):
         yield {
