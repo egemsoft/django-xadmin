@@ -105,10 +105,19 @@ class FilterPlugin(BaseAdminPlugin):
                 else:
                     field_path = None
                     field_parts = []
+                    where_parts = None
+                    choices = None
                     title = None
                     if isinstance(list_filter, (tuple, list)):
                         # This is a custom FieldListFilter class for a given field.
-                        field, field_list_filter_class, title = list_filter
+                        field, field_list_filter_class, config = list_filter
+                        if config:
+                            if 'title' in config:
+                                title = config['title']
+                            if 'where_parts' in config:
+                                where_parts = config['where_parts']
+                            if 'choices' in config:
+                                choices = config['choices']
                         if not field_list_filter_class:
                             field_list_filter_class = filter_manager.create
                     else:
@@ -118,20 +127,24 @@ class FilterPlugin(BaseAdminPlugin):
                         field, field_list_filter_class = list_filter, filter_manager.create
                     if not isinstance(field, models.Field):
                         field_path = field
-                        field_parts = get_fields_from_path(
-                            self.model, field_path)
-                        field = field_parts[-1]
-                    spec = field_list_filter_class(
-                        field, self.request, lookup_params,
-                        self.model, self.admin_view, field_path=field_path, title=title)
+                        try:
+                            field_parts = get_fields_from_path(self.model, field_path)
+                        except FieldDoesNotExist, e:
+                            if not where_parts:
+                                raise e
+                            else:
+                                field_parts = field_path.split('__')
 
+                        field = field_parts[-1]
+
+                    spec = field_list_filter_class(field, self.request, lookup_params, self.model, self.admin_view, field_path=field_path, title=title, where_parts=where_parts, external_choices=choices)
                     if not title and len(field_parts) > 1:
                         # Add related model name to title
                         spec.title = "%s %s" % (field_parts[-2].name, spec.title)
 
                     # Check if we need to use distinct()
-                    use_distinct = (use_distinct or
-                                    lookup_needs_distinct(self.opts, field_path))
+                    if not where_parts:
+                        use_distinct = (use_distinct or lookup_needs_distinct(self.opts, field_path))
                 if spec and spec.has_output():
                     try:
                         new_qs = spec.do_filte(queryset)
