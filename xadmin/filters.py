@@ -481,7 +481,7 @@ class RelatedFieldListFilter(ListFieldFilter):
 
         self.lookup_formats = {'in': '%%s__%s__in' % rel_name, 'exact': '%%s__%s__exact' %
                                                                         rel_name, 'isnull': '%s__isnull'}
-        self.lookup_choices = self.external_choices if self.external_choices else field.get_choices(include_blank=False)
+        self.lookup_choices = external_choices if external_choices else field.get_choices(include_blank=False)
         super(RelatedFieldListFilter, self).__init__(
             field, request, params, model, model_admin, field_path, title=title, where_parts=where_parts, external_choices=external_choices)
 
