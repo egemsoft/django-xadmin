@@ -2,7 +2,7 @@
 import StringIO
 import datetime
 import sys
-
+from stripogram import html2text
 from django.http import HttpResponse
 from django.template import loader
 from django.utils.encoding import force_unicode, smart_unicode
@@ -60,28 +60,38 @@ class ExportPlugin(BaseAdminPlugin):
         return self.request.GET.get('_do_') == 'export'
 
     def _format_value(self, o):
+
         if (o.field is None and getattr(o.attr, 'boolean', False)) or \
            (o.field and isinstance(o.field, (BooleanField, NullBooleanField))):
                 value = o.value
-        elif str(o.text).startswith("<span class='text-muted'>"):
-            value = escape(str(o.text)[25:-7])
+        elif str(o.text).startswith("<") and  str(o.text).endswith(">"):
+            value =  html2text(o.text)
+            value = " ".join(value.split())
+
         else:
             value = escape(str(o.text))
-        return reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, value)
+            value = " ".join(value.split())
+        return value #reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, value)
 
     def _get_objects(self, context):
         headers = [c for c in context['result_headers'].cells if c.export]
         rows = context['results']
 
         return [dict([
-            (reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, force_unicode(headers[i].text)), self._format_value(o)) for i, o in
+            (force_unicode(headers[i].text), self._format_value(o)) for i, o in
             enumerate(filter(lambda c:getattr(c, 'export', False), r.cells))]) for r in rows]
+
 
     def _get_datas(self, context):
         rows = context['results']
 
+        new_rows = []
+        for r in rows:
+            for o in filter(lambda c:getattr(c, 'export', False), r.cells):
+                new_rows.append(self._format_value(o))
+
         new_rows = [[self._format_value(o) for o in
-            filter(lambda c:getattr(c, 'export', False), r.cells)] for r in rows]
+           filter(lambda c:getattr(c, 'export', False), r.cells)] for r in rows]
         new_rows.insert(0, [force_unicode(c.text) for c in context['result_headers'].cells if c.export])
         return new_rows
 
@@ -116,7 +126,7 @@ class ExportPlugin(BaseAdminPlugin):
                         cell_style = styles['time']
                     else:
                         cell_style = styles['default']
-                sheet.write(rowx, colx, reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, value), cell_style)
+                sheet.write(rowx, colx, value, cell_style) #reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, value)
         book.close()
 
         output.seek(0)
@@ -153,19 +163,21 @@ class ExportPlugin(BaseAdminPlugin):
                         cell_style = styles['time']
                     else:
                         cell_style = styles['default']
-                sheet.write(rowx, colx, reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, value), style=cell_style)
+                sheet.write(rowx, colx, value, style=cell_style) #reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, value)
         book.save(output)
 
         output.seek(0)
         return output.getvalue()
 
     def _format_csv_text(self, t):
+
         if isinstance(t, bool):
             return _('Yes') if t else _('No')
         t = t.replace('"', '""').replace(',', '\,')
         if isinstance(t, basestring):
             t = '"%s"' % t
-        return reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, t)
+
+        return t #reduce(lambda x, y: x.upper().replace(y, mapping[y]), mapping, t)
 
     def get_csv_export(self, context):
         datas = self._get_datas(context)
