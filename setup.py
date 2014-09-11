@@ -18,7 +18,8 @@ setup(
     include_package_data=True,
     install_requires=[
         'setuptools',
-        'django>=1.5',
+        'django<1.7',
+        'stripogram',
         'django-crispy-forms>=1.4.0',
     ],
     extras_require={
